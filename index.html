@@ -393,11 +393,7 @@ async function loadData(){
   document.getElementById('loading-overlay').style.display='flex';
   document.getElementById('loading-text').textContent='Carregando dados...';
   try {
-    const snap = await db.collection(COLLECTION).limit(1).get();
-    if(snap.empty){
-      document.getElementById('loading-text').textContent='Inicializando banco de dados (primeira vez)...';
-      await seedFirestore();
-    }
+    await syncMissingDocs();
     startListener();
   } catch(e){
     console.error(e);
@@ -406,13 +402,26 @@ async function loadData(){
   }
 }
 
-async function seedFirestore(){
-  const BATCH_SIZE=500;
-  for(let i=0;i<INITIAL_DATA.length;i+=BATCH_SIZE){
+async function syncMissingDocs(){
+  // Busca IDs existentes no Firestore
+  const snap = await db.collection(COLLECTION).get();
+  const existingIds = new Set(snap.docs.map(d=>d.id));
+  const TOTAL = INITIAL_DATA.length;
+
+  // Filtra apenas os que ainda não existem
+  const missing = INITIAL_DATA.filter(s=>!existingIds.has(s.npc+'_'+String(s.item)));
+  if(missing.length === 0) return; // tudo ok
+
+  document.getElementById('loading-text').textContent=
+    `Adicionando ${missing.length} site(s) ao banco...`;
+
+  const BATCH_SIZE=400;
+  for(let i=0;i<missing.length;i+=BATCH_SIZE){
     const batch=db.batch();
-    INITIAL_DATA.slice(i,i+BATCH_SIZE).forEach(s=>{
-      const ref=db.collection(COLLECTION).doc(s.npc+'_'+String(s.item));
-      batch.set(ref,{...s,status:'Pendente',responsavel:'',sharepoint:'',obs:'',_docId:s.npc+'_'+String(s.item)});
+    missing.slice(i,i+BATCH_SIZE).forEach(s=>{
+      const id=s.npc+'_'+String(s.item);
+      const ref=db.collection(COLLECTION).doc(id);
+      batch.set(ref,{...s,status:'Pendente',responsavel:'',sharepoint:'',obs:''});
     });
     await batch.commit();
   }
