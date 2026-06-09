@@ -294,28 +294,27 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const provider = new firebase.auth.GoogleAuthProvider();
-provider.setCustomParameters({ hd: 'breconsultoria.com.br' });
 
-// E-mails autorizados (ajuste conforme necessário)
+// E-mails autorizados
 const AUTHORIZED_EMAILS = [
   'erasmo@breconsultoria.com.br',
-  'matheus@breconsultoria.com.br',
-  'ino@breconsultoria.com.br',
-  'rodrigo@breconsultoria.com.br',
-  'jonathan@breconsultoria.com.br',
-  'marcus@breconsultoria.com.br',
+  'matheus.siqueira@breconsultoria.com.br',
+  'rodrigo@prest.breconsultoria.com.br',
+  'severino.xavier@prest.breconsultoria.com.br',
+  'marcus.vinicius@breconsultoria.com.br',
+  'j.fernandes@breconsultoria.com.br',
   'yohanna@breconsultoria.com.br'
 ];
 
 // Mapeamento email → nome no sistema
 const EMAIL_TO_NAME = {
-  'erasmo@breconsultoria.com.br':   'Erasmo',
-  'matheus@breconsultoria.com.br':  'Matheus',
-  'ino@breconsultoria.com.br':      'Ino',
-  'rodrigo@breconsultoria.com.br':  'Rodrigo',
-  'jonathan@breconsultoria.com.br': 'Jonathan',
-  'marcus@breconsultoria.com.br':   'Marcus',
-  'yohanna@breconsultoria.com.br':  'Yohanna'
+  'erasmo@breconsultoria.com.br':          'Erasmo',
+  'matheus.siqueira@breconsultoria.com.br': 'Matheus',
+  'rodrigo@prest.breconsultoria.com.br':    'Rodrigo',
+  'severino.xavier@prest.breconsultoria.com.br': 'Ino',
+  'marcus.vinicius@breconsultoria.com.br':  'Marcus',
+  'j.fernandes@breconsultoria.com.br':      'Jonathan',
+  'yohanna@breconsultoria.com.br':          'Yohanna'
 };
 
 let currentUser = null;
