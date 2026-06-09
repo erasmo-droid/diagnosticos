@@ -411,8 +411,8 @@ async function seedFirestore(){
   for(let i=0;i<INITIAL_DATA.length;i+=BATCH_SIZE){
     const batch=db.batch();
     INITIAL_DATA.slice(i,i+BATCH_SIZE).forEach(s=>{
-      const ref=db.collection(COLLECTION).doc(s.site);
-      batch.set(ref,{...s,status:'Pendente',responsavel:'',sharepoint:'',obs:''});
+      const ref=db.collection(COLLECTION).doc(s.npc+'_'+String(s.item));
+      batch.set(ref,{...s,status:'Pendente',responsavel:'',sharepoint:'',obs:'',_docId:s.npc+'_'+String(s.item)});
     });
     await batch.commit();
   }
