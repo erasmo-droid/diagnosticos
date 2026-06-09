@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Diagnóstico</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1F4E79;--blue:#2E75B6;--lblue:#D6E4F0;--lgray:#F5F5F5;
+  --pend:#FFD966;--pend-t:#7D5A00;
+  --rev:#F4B183;--rev-t:#7D3000;
+  --share:#9DC3E6;--share-t:#0C3F6B;
+  --conc:#A9D18E;--conc-t:#1E4D00;
+  --radius:8px;--shadow:0 2px 8px rgba(0,0,0,.1)
+}
+body{font-family:Arial,sans-serif;font-size:14px;background:#EEF2F7;color:#1F1F1F;min-height:100vh}
+
+/* LOGIN SCREEN */
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#1F4E79 0%,#2E75B6 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
+.login-card{background:#fff;border-radius:20px;padding:40px 36px;width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-logo{font-size:40px;margin-bottom:12px}
+.login-card h1{font-size:20px;color:var(--navy);margin-bottom:6px;font-weight:700}
+.login-card p{font-size:13px;color:#888;margin-bottom:32px;line-height:1.5}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px;border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:#333;transition:.2s}
+.btn-google:hover{background:#F8F9FA;border-color:#C5C5C5;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.btn-google svg{flex-shrink:0}
+.login-error{margin-top:16px;padding:10px 14px;background:#FEE2E2;border-radius:8px;font-size:12px;color:#991B1B;display:none}
+.login-loading{margin-top:16px;font-size:12px;color:#888;display:none}
+
+/* HEADER */
+header{background:var(--navy);color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+header h1{font-size:18px;font-weight:700}
+.user-chip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.15);border-radius:24px;padding:5px 14px 5px 5px;cursor:default}
+.user-photo{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.3)}
+.user-avatar-fallback{width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.user-info{line-height:1.2}
+.user-name{font-size:13px;font-weight:600}
+.user-email{font-size:10px;opacity:.7}
+.btn-logout{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-left:8px}
+.btn-logout:hover{background:rgba(255,255,255,.25)}
+
+/* TABS */
+.tabs{display:flex;background:#fff;border-bottom:2px solid #E5E7EB;padding:0 24px;position:sticky;top:56px;z-index:90}
+.tab{padding:14px 20px;cursor:pointer;font-size:13px;font-weight:600;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s;white-space:nowrap}
+.tab.active{color:var(--navy);border-bottom-color:var(--navy)}
+.tab:hover{color:var(--blue)}
+
+main{padding:20px 24px;max-width:1400px;margin:0 auto}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border-top:4px solid transparent}
+.stat-card .label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-card .value{font-size:28px;font-weight:700;color:var(--navy)}
+.stat-card .sub{font-size:11px;color:#999;margin-top:2px}
+
+.progress-wrap{background:#fff;border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);margin-bottom:20px}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:8px}
+.progress-bar{height:14px;border-radius:7px;overflow:hidden;display:flex;background:#E5E7EB}
+.pb-seg{height:100%;transition:.4s}
+
+.filters{background:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.filters input,.filters select{border:1px solid #E5E7EB;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;transition:.15s}
+.filters input:focus,.filters select:focus{border-color:var(--blue)}
+.filters input{flex:1;min-width:180px}
+.btn-clear{background:none;border:1px solid #E5E7EB;border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;color:#888}
+.btn-clear:hover{border-color:var(--blue);color:var(--blue)}
+.filter-count{font-size:12px;color:#888;margin-left:auto}
+
+.table-wrap{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--navy);color:#fff;padding:11px 12px;text-align:left;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{background:#2a5f92}
+tbody tr{border-bottom:1px solid #F0F0F0;transition:.1s}
+tbody tr:hover{background:#F7FAFF}
+tbody td{padding:9px 12px;font-size:13px}
+.td-pc{font-weight:700;color:var(--navy);font-size:12px}
+.td-item{color:#999;font-size:12px;text-align:center}
+.td-site{font-weight:700;font-family:monospace;font-size:13px}
+.td-desc{font-size:11px;color:#888;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap}
+.s-Pendente{background:var(--pend);color:var(--pend-t)}
+.s-EmRevisao{background:var(--rev);color:var(--rev-t)}
+.s-AguardandoSharepoint{background:var(--share);color:var(--share-t)}
+.s-Concluido{background:var(--conc);color:var(--conc-t)}
+
+.resp-chip{background:var(--lblue);color:var(--navy);border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600}
+.resp-none{color:#CCC;font-style:italic;font-size:11px}
+
+.kanban{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;align-items:start}
+.kanban-col{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.kanban-header{padding:12px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.kanban-count{background:rgba(0,0,0,.12);border-radius:10px;padding:1px 7px;font-size:11px}
+.kanban-body{padding:8px;display:flex;flex-direction:column;gap:6px;max-height:520px;overflow-y:auto}
+.kanban-card{background:var(--lgray);border-radius:6px;padding:8px 10px;font-size:12px;cursor:pointer;border:1px solid #E5E7EB;transition:.15s}
+.kanban-card:hover{border-color:var(--blue);background:var(--lblue)}
+.kanban-card .kc-site{font-weight:700;font-family:monospace;margin-bottom:3px}
+.kanban-card .kc-pc{color:#888;font-size:11px}
+.kanban-card .kc-resp{color:var(--navy);font-size:11px;font-weight:600;margin-top:4px}
+
+.resp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.resp-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.resp-card-header{background:var(--navy);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+.resp-card-body{padding:12px}
+.resp-status-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F0F0F0;font-size:12px}
+.resp-status-row:last-child{border:none}
+
+.pc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.pc-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.pc-header{background:var(--blue);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;font-size:13px;font-weight:700}
+.pc-progress{height:6px;background:#E5E7EB}
+.pc-progress-bar{height:6px;background:var(--conc);transition:.4s}
+.pc-body{padding:12px}
+.pc-stat{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:#555}
+.pc-stat-val{font-weight:700;color:var(--navy)}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center}
+.edit-modal{background:#fff;border-radius:16px;padding:28px;width:440px;box-shadow:0 8px 32px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto}
+.edit-modal h3{font-size:17px;color:var(--navy);margin-bottom:4px}
+.edit-modal .em-site{font-family:monospace;font-size:22px;font-weight:700;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px}
+.form-group select,.form-group textarea{width:100%;border:1px solid #E5E7EB;border-radius:6px;padding:9px 10px;font-size:13px;font-family:Arial,sans-serif;outline:none}
+.form-group textarea{resize:vertical;min-height:70px}
+.em-actions{display:flex;gap:10px;margin-top:20px}
+.btn{padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:hover{background:var(--blue)}
+.btn-sec{background:#F0F0F0;color:#555}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:.3s}
+.toast.show{transform:translateY(0);opacity:1}
+
+.export-bar{display:flex;gap:10px;justify-content:flex-end;margin-bottom:14px}
+.btn-export{background:var(--navy);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-export:hover{background:var(--blue)}
+
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border-top:1px solid #F0F0F0}
+.page-btn{width:32px;height:32px;border-radius:6px;border:1px solid #E5E7EB;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#555;display:flex;align-items:center;justify-content:center}
+.page-btn:hover{border-color:var(--blue);color:var(--blue)}
+.page-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⚡</div>
+    <h1>Controle de Diagnóstico</h1>
+    <p>Sistema de acompanhamento de diagnósticos<br>BRE Consultoria</p>
+    <button class="btn-google" onclick="loginGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6C12.4 13 17.8 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17z"/>
+        <path fill="#FBBC05" d="M10.5 28.7A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.7 10.7l7.8-6z"/>
+        <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.7 2.3-7.7 2.3-6.2 0-11.5-4.2-13.4-9.8l-7.9 6C6.5 42.6 14.6 48 24 48z"/>
+      </svg>
+      Entrar com Google
+    </button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-loading" id="login-loading">Verificando acesso...</div>
+  </div>
+</div>
+
+<!-- APP (hidden until login) -->
+<div id="app" style="display:none">
+
+<div id="edit-overlay" class="overlay" style="display:none">
+  <div class="edit-modal">
+    <h3>Editar diagnóstico</h3>
+    <div class="em-site" id="em-site"></div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px" id="em-meta"></div>
+    <div class="form-group">
+      <label>Responsável</label>
+      <select id="em-resp"></select>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="em-status"></select>
+    </div>
+    <div class="form-group">
+      <label>Envio Sharepoint</label>
+      <select id="em-sp">
+        <option value="">—</option>
+        <option value="Sim">Sim</option>
+        <option value="Não">Não</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Observações</label>
+      <textarea id="em-obs" placeholder="Anotações..."></textarea>
+    </div>
+    <div class="em-actions">
+      <button class="btn btn-primary" onclick="saveEdit()">Salvar</button>
+      <button class="btn btn-sec" onclick="closeEdit()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <h1>⚡ Controle de Diagnóstico</h1>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="user-chip" id="user-chip">
+      <img id="user-photo" class="user-photo" src="" alt="" style="display:none">
+      <div class="user-avatar-fallback" id="user-avatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="header-name">—</div>
+        <div class="user-email" id="header-email"></div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab('lista',this)">Lista</div>
+  <div class="tab" onclick="setTab('kanban',this)">Kanban</div>
+  <div class="tab" onclick="setTab('responsaveis',this)">Por Responsável</div>
+  <div class="tab" onclick="setTab('pc',this)">Por PC</div>
+</div>
+
+<main>
+  <div class="stats-row" id="stats-row"></div>
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Progresso geral</span><span id="prog-label">0%</span></div>
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <div id="view-lista">
+    <div class="filters">
+      <input type="text" id="search" placeholder="Buscar site, PC…" oninput="applyFilters()">
+      <select id="f-status" onchange="applyFilters()">
+        <option value="">Todos os status</option>
+        <option>Pendente</option>
+        <option>Em Revisão</option>
+        <option>Aguardando envio Sharepoint</option>
+        <option>Concluído</option>
+      </select>
+      <select id="f-resp" onchange="applyFilters()">
+        <option value="">Todos os responsáveis</option>
+        <option value="__none">Sem responsável</option>
+      </select>
+      <select id="f-pc" onchange="applyFilters()">
+        <option value="">Todos os PCs</option>
+      </select>
+      <button class="btn-clear" onclick="clearFilters()">Limpar</button>
+      <span class="filter-count" id="filter-count"></span>
+    </div>
+    <div class="export-bar">
+      <button class="btn-export" onclick="exportCSV()">⬇ Exportar CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th onclick="sortBy('npc')">Nº PC ↕</th>
+          <th onclick="sortBy('item')">Item ↕</th>
+          <th onclick="sortBy('site')">Site ↕</th>
+          <th>Descrição</th>
+          <th onclick="sortBy('responsavel')">Responsável ↕</th>
+          <th onclick="sortBy('status')">Status ↕</th>
+          <th>Sharepoint</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+
+  <div id="view-kanban" style="display:none"><div class="kanban" id="kanban-board"></div></div>
+  <div id="view-responsaveis" style="display:none"><div class="resp-grid" id="resp-grid"></div></div>
+  <div id="view-pc" style="display:none"><div class="pc-grid" id="pc-grid"></div></div>
+</main>
+</div><!-- #app -->
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+<script>
+// ── FIREBASE CONFIG ───────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBdIlHtrKWFMlodF6DzYZgS6IXx8QoqRMM",
+  authDomain: "diagnosticos-breconsultoria.firebaseapp.com",
+  projectId: "diagnosticos-breconsultoria",
+  storageBucket: "diagnosticos-breconsultoria.firebasestorage.app",
+  messagingSenderId: "161701679115",
+  appId: "1:161701679115:web:f59f589293172c58ed770e"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
+provider.setCustomParameters({ hd: 'breconsultoria.com.br' });
+
+// E-mails autorizados (ajuste conforme necessário)
+const AUTHORIZED_EMAILS = [
+  'erasmo@breconsultoria.com.br',
+  'matheus@breconsultoria.com.br',
+  'ino@breconsultoria.com.br',
+  'rodrigo@breconsultoria.com.br',
+  'jonathan@breconsultoria.com.br',
+  'marcus@breconsultoria.com.br',
+  'yohanna@breconsultoria.com.br'
+];
+
+// Mapeamento email → nome no sistema
+const EMAIL_TO_NAME = {
+  'erasmo@breconsultoria.com.br':   'Erasmo',
+  'matheus@breconsultoria.com.br':  'Matheus',
+  'ino@breconsultoria.com.br':      'Ino',
+  'rodrigo@breconsultoria.com.br':  'Rodrigo',
+  'jonathan@breconsultoria.com.br': 'Jonathan',
+  'marcus@breconsultoria.com.br':   'Marcus',
+  'yohanna@breconsultoria.com.br':  'Yohanna'
+};
+
+let currentUser = null;
+let currentUserName = '';
+
+function loginGoogle() {
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-loading').style.display = 'block';
+  auth.signInWithPopup(provider)
+    .then(result => {
+      const email = result.user.email;
+      if (!AUTHORIZED_EMAILS.includes(email)) {
+        auth.signOut();
+        document.getElementById('login-loading').style.display = 'none';
+        showLoginError('Acesso não autorizado para: ' + email);
+      }
+    })
+    .catch(err => {
+      document.getElementById('login-loading').style.display = 'none';
+      if (err.code !== 'auth/popup-closed-by-user') {
+        showLoginError('Erro ao fazer login. Tente novamente.');
+      }
+    });
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function logout() {
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user => {
+  if (user && AUTHORIZED_EMAILS.includes(user.email)) {
+    currentUser = user;
+    currentUserName = EMAIL_TO_NAME[user.email] || user.displayName || user.email;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('login-loading').style.display = 'none';
+    updateHeader();
+    init();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    currentUser = null;
+  }
+});
+
+function updateHeader() {
+  document.getElementById('header-name').textContent = currentUserName;
+  document.getElementById('header-email').textContent = currentUser.email;
+  document.getElementById('user-avatar').textContent = currentUserName[0];
+  if (currentUser.photoURL) {
+    const img = document.getElementById('user-photo');
+    img.src = currentUser.photoURL;
+    img.style.display = 'block';
+    document.getElementById('user-avatar').style.display = 'none';
+  }
+}
+
+// ── APP DATA ──────────────────────────────────────────────────────────────
+const RESPONSAVEIS  = ['Erasmo','Matheus','Ino','Rodrigo','Jonathan','Marcus','Yohanna'];
+const STATUS_LIST   = ['Pendente','Em Revisão','Aguardando envio Sharepoint','Concluído'];
+const STATUS_COLORS = {'Pendente':'#FFD966','Em Revisão':'#F4B183','Aguardando envio Sharepoint':'#9DC3E6','Concluído':'#A9D18E'};
+const STATUS_TEXT   = {'Pendente':'#7D5A00','Em Revisão':'#7D3000','Aguardando envio Sharepoint':'#0C3F6B','Concluído':'#1E4D00'};
+const STORAGE_KEY   = 'diag_sites_v2';
+
+function sk(s){return s.replace(/[^a-zA-Z]/g,'');}
+
+const INITIAL_DATA = [{"npc": "58973", "item": 30, "site": "PEMRD001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "58974", "item": 4, "site": "PERCR004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "58974", "item": 5, "site": "PERCR005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "58974", "item": 6, "site": "PESRR008", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "58974", "item": 7, "site": "PEXXX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "58974", "item": 8, "site": "PIBTN002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "58974", "item": 10, "site": "PIGRB001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 15, "site": "BACRD003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 18, "site": "BADST003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 19, "site": "BAGBR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 21, "site": "BAGLR005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 24, "site": "BAJSD001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 26, "site": "BAJSD004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 27, "site": "BAJSS002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 46, "site": "BAPRW006", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59462", "item": 49, "site": "BARBR005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 8, "site": "BASLV047", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 9, "site": "BASLV056", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 10, "site": "BASLV057", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 11, "site": "BASLV059", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 12, "site": "BASLV060", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 13, "site": "BASLV061", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 14, "site": "BASLV062", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 16, "site": "BASLV064", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 17, "site": "BASLV065", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 18, "site": "BASNH004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 20, "site": "BASPL001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 21, "site": "BASTR002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 22, "site": "BATCN006", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 23, "site": "BATCN011", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 24, "site": "BATCR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 25, "site": "BATNG003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 26, "site": "BATPY001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 27, "site": "BATPZ002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 28, "site": "BATRN002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 30, "site": "BAWGN002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 31, "site": "BAWRZ003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 32, "site": "BAXRR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 33, "site": "BAXRX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 34, "site": "BAXRX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 35, "site": "BAZXR003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 36, "site": "CEMMB002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 37, "site": "CEPQT003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 38, "site": "CEPRM003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 39, "site": "CESBR004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 40, "site": "CESBR006", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 41, "site": "CESLN003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 43, "site": "CETMB004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 45, "site": "CETNG004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 47, "site": "PBJPS014", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59463", "item": 48, "site": "PIBMJ001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 2, "site": "PICCY001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 3, "site": "PICMY001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 6, "site": "PICRW001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 10, "site": "PIDMX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 14, "site": "PIJCM002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 21, "site": "PILGR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 23, "site": "PILSC001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 24, "site": "PILSD001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 25, "site": "PILVR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 26, "site": "PILZL003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 27, "site": "PIMDR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 28, "site": "PIMGW002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 37, "site": "PIPRX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 38, "site": "PIPRY003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 39, "site": "PIPRZ002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 40, "site": "PIPSS001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 42, "site": "PIRCX005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 43, "site": "PIRCX007", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 45, "site": "PIRRS001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59464", "item": 50, "site": "PITRS022", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 1, "site": "PITRS023", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 2, "site": "PITRS024", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 3, "site": "PITRS025", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 4, "site": "PITRS026", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 5, "site": "PITRS027", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 6, "site": "PIVLN352", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 7, "site": "PIWLL002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 8, "site": "PESLX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 9, "site": "PERCR002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 10, "site": "PEPTR032", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 11, "site": "PERCR003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 12, "site": "PEDRM003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 13, "site": "PECRR003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 14, "site": "PEJSD007", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 15, "site": "PETRX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 17, "site": "PECRZ005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 18, "site": "PELGG002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 19, "site": "PEPCX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 20, "site": "PEPDL002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 21, "site": "PERCX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 22, "site": "PENZR002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 23, "site": "PEBLJ001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 24, "site": "PEMRL001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 25, "site": "PELGW002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 26, "site": "PELMR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 27, "site": "PEPJC014", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 28, "site": "PEPLM001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 29, "site": "PEPNL001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 30, "site": "PEPNL002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 31, "site": "PEPRN001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 32, "site": "PEPRX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 33, "site": "PEBRJ004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 34, "site": "PECRR007", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 35, "site": "PECRY002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 39, "site": "PEFLM002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 42, "site": "PEJRM001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 43, "site": "PEJTB001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 45, "site": "PEVRD001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 46, "site": "PEVRT001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 49, "site": "PEMRD007", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59465", "item": 50, "site": "PEMRJ002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 1, "site": "PEBLJ002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 3, "site": "PEBNX004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 4, "site": "PEBNX005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 5, "site": "PECTX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 6, "site": "PEDRM002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 9, "site": "PEJQM001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 10, "site": "PEJSD004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 11, "site": "PEJSD009", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 12, "site": "PEJTB002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 13, "site": "PEJTB003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 14, "site": "PELGY002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 15, "site": "PELTN001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 16, "site": "PELTN002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 17, "site": "PELTN003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 18, "site": "PELTN004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 23, "site": "PEMRD003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 24, "site": "PEMRD004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 25, "site": "PEMRD005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 26, "site": "PEMRN003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 27, "site": "PEMRX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 28, "site": "PEPDR002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 29, "site": "PEPLX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 30, "site": "PEPRM001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 31, "site": "PEPRN002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 32, "site": "PEPSQ001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 33, "site": "PEPSQ003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 34, "site": "PEPTR031", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 35, "site": "PEPTR035", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 36, "site": "PERBX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 39, "site": "PERCR007", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 40, "site": "PERCX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 45, "site": "PESLX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 46, "site": "PESRT003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 47, "site": "PESRX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59466", "item": 48, "site": "PESRX005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 1, "site": "PEXXX004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 2, "site": "PEXXX006", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 6, "site": "PEVNT001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 7, "site": "PESRX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 8, "site": "PEBRJ003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 10, "site": "PEBRJ005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 11, "site": "PECMR002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 12, "site": "PECRY001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 13, "site": "PEGRV003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 14, "site": "PEJTX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 15, "site": "PELGG001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 16, "site": "PEMRD002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 18, "site": "PEPJC013", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 19, "site": "PEPTR030", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 20, "site": "PESLD001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 23, "site": "PESRT002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 26, "site": "PETRR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 27, "site": "PEVRX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 29, "site": "PEPDR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 30, "site": "PESLG002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 31, "site": "PETCM001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 32, "site": "PESRX006", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 33, "site": "PEMRY001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 34, "site": "PETBR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 38, "site": "PELGY001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 39, "site": "PERCR006", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 41, "site": "PEBRJ002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 43, "site": "PEJPX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 44, "site": "PEJSD008", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 46, "site": "PERBR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 47, "site": "PEBNX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59467", "item": 48, "site": "PEPSQ002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59468", "item": 1, "site": "PERCR008", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59468", "item": 3, "site": "PESRT004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59468", "item": 4, "site": "PEXXX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59468", "item": 5, "site": "PEXXX005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59468", "item": 6, "site": "PESRN001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "59468", "item": 8, "site": "PEVTR004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "60361", "item": 1, "site": "ALTLX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "60361", "item": 17, "site": "ALJQM001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "60361", "item": 18, "site": "ALJRM002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "60361", "item": 41, "site": "ALMCX018", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "60362", "item": 5, "site": "ALPLS001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "60362", "item": 8, "site": "ALRPR007", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61748", "item": 1, "site": "PIJSD001", "desc": "DIAGNOSTICO DE LICENCIAMENTO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 1, "site": "ALMCX035", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 2, "site": "BABRR065", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 3, "site": "BASLV099", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 4, "site": "BATRN004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 5, "site": "BAVTR016", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 6, "site": "BAVTR017", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 7, "site": "BAVTR018", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 8, "site": "BAVTR019", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 9, "site": "PBBRJ001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 10, "site": "PBCCH001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 11, "site": "PBJCC005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 12, "site": "PBMNT002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 13, "site": "PBPTM002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 14, "site": "PBRNX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 15, "site": "PBRNX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 16, "site": "PEMRD015", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 17, "site": "PEPSS003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 18, "site": "PESLG004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 19, "site": "SECPL003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "61874", "item": 20, "site": "SEMLX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 10, "site": "ALPDC001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 11, "site": "ALPND002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 14, "site": "ALBRX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 15, "site": "ALNDM004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 16, "site": "ALNDP002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 17, "site": "ALNDP003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 18, "site": "ALNDP004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 19, "site": "ALNHP001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 20, "site": "ALNHP002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 21, "site": "ALNHP003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 22, "site": "ALPCD001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 23, "site": "ALPDC001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 24, "site": "ALPND002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 25, "site": "ALBRX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 26, "site": "ALNDM004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 27, "site": "ALNDP002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 28, "site": "ALNDP003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 29, "site": "ALNDP004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 30, "site": "ALNHP001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 31, "site": "ALNHP002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 32, "site": "ALNHP003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 33, "site": "ALPCD001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 34, "site": "ALPDC001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 35, "site": "ALPND002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 36, "site": "ALPRN002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 37, "site": "ALRBR002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 39, "site": "BABRM287", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 40, "site": "BABRZ001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 41, "site": "BAFLR002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 42, "site": "BAJGR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 43, "site": "BAJGR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 44, "site": "BAJSD004", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 45, "site": "BAMRY001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 46, "site": "BARBR005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 47, "site": "BASLV043", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 48, "site": "BASLV064", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 49, "site": "BAXRR001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 50, "site": "CESLN003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62957", "item": 51, "site": "PBBRJ001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 1, "site": "PBCCH001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 2, "site": "PBCNC001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 3, "site": "PBGRB003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 4, "site": "PBGRB003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 5, "site": "PBJCC005", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 6, "site": "PBRNX002", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 7, "site": "PBRNX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 8, "site": "PECRR006", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 9, "site": "PEMRJ001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 10, "site": "PILGW001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 11, "site": "PIPLX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 12, "site": "PIRSX003", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}, {"npc": "62958", "item": 13, "site": "SEMLX001", "desc": "DIAGNOSTICO COM VISTORIA", "responsavel": "", "status": "Pendente", "sharepoint": "", "obs": ""}];
+
+let sites=[], editIdx=-1, sortCol='npc', sortAsc=true, filtered=[], page=1;
+const PAGE_SIZE=30;
+let currentTab='lista';
+
+function init(){
+  sites = JSON.parse(localStorage.getItem(STORAGE_KEY)||'null') ||
+          INITIAL_DATA.map(s=>({...s, status:'Pendente'}));
+  populateFilters();
+  render();
+}
+
+// ── STATS ──────────────────────────────────────────────────────────────────
+function renderStats(){
+  const c={};STATUS_LIST.forEach(s=>c[s]=0);
+  sites.forEach(s=>{if(c[s.status]!==undefined)c[s.status]++;});
+  const total=sites.length, conc=c['Concluído'];
+  const pct=total?Math.round(conc/total*100):0;
+  document.getElementById('stats-row').innerHTML=
+    STATUS_LIST.map(s=>`<div class="stat-card" style="border-top-color:${STATUS_COLORS[s]}">
+      <div class="label">${s}</div><div class="value">${c[s]}</div>
+      <div class="sub">${total?Math.round(c[s]/total*100):0}% do total</div></div>`).join('')+
+    `<div class="stat-card" style="border-top-color:#1F4E79">
+      <div class="label">Total</div><div class="value">${total}</div><div class="sub">264 sites</div></div>`;
+  document.getElementById('progress-bar').innerHTML=
+    STATUS_LIST.map(s=>`<div class="pb-seg" style="width:${total?c[s]/total*100:0}%;background:${STATUS_COLORS[s]}"></div>`).join('');
+  document.getElementById('prog-label').textContent=pct+'% concluído';
+}
+
+// ── TABS ───────────────────────────────────────────────────────────────────
+function setTab(tab,el){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['lista','kanban','responsaveis','pc'].forEach(v=>{
+    document.getElementById('view-'+v).style.display=v===tab?'block':'none';
+  });
+  render();
+}
+
+// ── FILTERS ────────────────────────────────────────────────────────────────
+function populateFilters(){
+  const fr=document.getElementById('f-resp'), fp=document.getElementById('f-pc');
+  [...new Set(sites.map(s=>s.responsavel).filter(Boolean))].sort()
+    .forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;fr.appendChild(o);});
+  [...new Set(sites.map(s=>s.npc))].sort()
+    .forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent='PC '+p;fp.appendChild(o);});
+}
+
+function applyFilters(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const fs=document.getElementById('f-status').value;
+  const fr=document.getElementById('f-resp').value;
+  const fp=document.getElementById('f-pc').value;
+  filtered=sites.filter((s,i)=>{
+    s._idx=i;
+    return (!q||s.site.toLowerCase().includes(q)||s.npc.includes(q)||(s.responsavel||'').toLowerCase().includes(q))
+      &&(!fs||s.status===fs)
+      &&(!fr||(fr==='__none'?!s.responsavel:s.responsavel===fr))
+      &&(!fp||s.npc===fp);
+  });
+  filtered.sort((a,b)=>{
+    let av=a[sortCol]||'',bv=b[sortCol]||'';
+    if(!isNaN(av)&&!isNaN(bv)){av=+av;bv=+bv;}
+    return sortAsc?(av>bv?1:av<bv?-1:0):(av<bv?1:av>bv?-1:0);
+  });
+  document.getElementById('filter-count').textContent=
+    filtered.length<sites.length?`${filtered.length} de ${sites.length}`:`${sites.length} sites`;
+  page=1; renderTable();
+}
+
+function clearFilters(){
+  ['search','f-status','f-resp','f-pc'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.value='';
+  });
+  applyFilters();
+}
+
+function sortBy(col){if(sortCol===col)sortAsc=!sortAsc;else{sortCol=col;sortAsc=true;}applyFilters();}
+
+// ── TABLE ──────────────────────────────────────────────────────────────────
+function renderTable(){
+  const slice=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
+  document.getElementById('table-body').innerHTML=slice.map(s=>`<tr>
+    <td class="td-pc">${s.npc}</td>
+    <td class="td-item">${s.item}</td>
+    <td class="td-site">${s.site}</td>
+    <td class="td-desc" title="${s.desc}">${s.desc}</td>
+    <td>${s.responsavel?`<span class="resp-chip">${s.responsavel}</span>`:`<span class="resp-none">—</span>`}</td>
+    <td><span class="badge s-${sk(s.status)}">${s.status}</span></td>
+    <td style="text-align:center;font-size:12px">${s.sharepoint||'—'}</td>
+    <td><button style="border:none;background:none;cursor:pointer;font-size:16px;padding:2px 6px" onclick="openEdit(${s._idx})">✏️</button></td>
+  </tr>`).join('');
+  renderPagination();
+}
+
+function renderPagination(){
+  const total=Math.ceil(filtered.length/PAGE_SIZE);
+  if(total<=1){document.getElementById('pagination').innerHTML='';return;}
+  const pages=[];
+  for(let i=1;i<=total;i++){
+    if(i===1||i===total||Math.abs(i-page)<=2)pages.push(i);
+    else if(pages[pages.length-1]!=='…')pages.push('…');
+  }
+  document.getElementById('pagination').innerHTML=pages.map(p=>
+    p==='…'?`<span style="padding:0 4px;color:#999">…</span>`:
+    `<button class="page-btn${p===page?' active':''}" onclick="goPage(${p})">${p}</button>`
+  ).join('');
+}
+function goPage(p){page=p;renderTable();window.scrollTo(0,300);}
+
+// ── KANBAN ─────────────────────────────────────────────────────────────────
+function renderKanban(){
+  const byS={};STATUS_LIST.forEach(s=>byS[s]=[]);
+  sites.forEach((s,i)=>{s._idx=i;if(byS[s.status])byS[s.status].push(s);});
+  document.getElementById('kanban-board').innerHTML=STATUS_LIST.map(st=>`
+    <div class="kanban-col">
+      <div class="kanban-header" style="background:${STATUS_COLORS[st]};color:${STATUS_TEXT[st]}">
+        <span>${st}</span><span class="kanban-count">${byS[st].length}</span>
+      </div>
+      <div class="kanban-body">
+        ${byS[st].map(s=>`<div class="kanban-card" onclick="openEdit(${s._idx})">
+          <div class="kc-site">${s.site}</div>
+          <div class="kc-pc">PC ${s.npc} · item ${s.item}</div>
+          ${s.responsavel?`<div class="kc-resp">👤 ${s.responsavel}</div>`:''}
+        </div>`).join('')}
+        ${!byS[st].length?`<div style="text-align:center;color:#CCC;font-size:12px;padding:20px">Nenhum site</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+// ── POR RESPONSÁVEL ────────────────────────────────────────────────────────
+function renderResponsaveis(){
+  document.getElementById('resp-grid').innerHTML=RESPONSAVEIS.map(resp=>{
+    const mine=sites.filter(s=>s.responsavel===resp);
+    const c={};STATUS_LIST.forEach(s=>c[s]=0);
+    mine.forEach(s=>{if(c[s.status]!==undefined)c[s.status]++;});
+    const isMe=resp===currentUserName;
+    return `<div class="resp-card" style="${isMe?'border:2px solid var(--navy)':''}">
+      <div class="resp-card-header" style="${isMe?'background:#0C3F6B':''}">
+        <span style="font-weight:700;font-size:15px">👤 ${resp}${isMe?' (você)':''}</span>
+        <span style="background:rgba(255,255,255,.2);border-radius:10px;padding:2px 10px;font-size:12px">${mine.length}</span>
+      </div>
+      <div class="resp-card-body">
+        ${STATUS_LIST.map(st=>c[st]>0?`<div class="resp-status-row">
+          <span><span class="badge s-${sk(st)}">${st}</span></span>
+          <span style="font-weight:700;color:var(--navy)">${c[st]}</span>
+        </div>`:'').join('')}
+        ${!mine.length?`<div style="color:#CCC;font-size:12px;text-align:center;padding:12px">Nenhum site atribuído</div>`:''}
+        <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:7px;font-size:12px" onclick="filterByResp('${resp}')">Ver sites →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function filterByResp(n){setTab('lista',document.querySelectorAll('.tab')[0]);document.getElementById('f-resp').value=n;applyFilters();}
+
+// ── POR PC ─────────────────────────────────────────────────────────────────
+function renderPC(){
+  const pcs=[...new Set(sites.map(s=>s.npc))].sort();
+  document.getElementById('pc-grid').innerHTML=pcs.map(pc=>{
+    const mine=sites.filter(s=>s.npc===pc);
+    const c={};STATUS_LIST.forEach(s=>c[s]=0);
+    mine.forEach(s=>{if(c[s.status]!==undefined)c[s.status]++;});
+    const pct=mine.length?Math.round(c['Concluído']/mine.length*100):0;
+    return `<div class="pc-card">
+      <div class="pc-header"><span>PC ${pc}</span><span>${mine.length} sites</span></div>
+      <div class="pc-progress"><div class="pc-progress-bar" style="width:${pct}%"></div></div>
+      <div class="pc-body">
+        <div class="pc-stat"><span>Concluídos</span><span class="pc-stat-val">${c['Concluído']} (${pct}%)</span></div>
+        <div class="pc-stat"><span>Em Revisão</span><span class="pc-stat-val">${c['Em Revisão']}</span></div>
+        <div class="pc-stat"><span>Ag. Sharepoint</span><span class="pc-stat-val">${c['Aguardando envio Sharepoint']}</span></div>
+        <div class="pc-stat"><span>Pendentes</span><span class="pc-stat-val">${c['Pendente']}</span></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:10px;padding:7px;font-size:12px" onclick="filterByPC('${pc}')">Ver sites →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function filterByPC(pc){setTab('lista',document.querySelectorAll('.tab')[0]);document.getElementById('f-pc').value=pc;applyFilters();}
+
+// ── EDIT ───────────────────────────────────────────────────────────────────
+function openEdit(idx){
+  const s=sites[idx];editIdx=idx;
+  document.getElementById('em-site').textContent=s.site;
+  document.getElementById('em-meta').textContent=`PC ${s.npc} · Item ${s.item} · ${s.desc}`;
+  document.getElementById('em-resp').innerHTML=
+    `<option value="">— Sem responsável —</option>`+
+    RESPONSAVEIS.map(r=>`<option value="${r}"${s.responsavel===r?' selected':''}>${r}</option>`).join('');
+  document.getElementById('em-status').innerHTML=
+    STATUS_LIST.map(st=>`<option value="${st}"${s.status===st?' selected':''}>${st}</option>`).join('');
+  document.getElementById('em-sp').value=s.sharepoint||'';
+  document.getElementById('em-obs').value=s.obs||'';
+  document.getElementById('edit-overlay').style.display='flex';
+}
+function closeEdit(){document.getElementById('edit-overlay').style.display='none';editIdx=-1;}
+function saveEdit(){
+  if(editIdx<0)return;
+  const s=sites[editIdx];
+  s.responsavel=document.getElementById('em-resp').value;
+  s.status=document.getElementById('em-status').value;
+  s.sharepoint=document.getElementById('em-sp').value;
+  s.obs=document.getElementById('em-obs').value;
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(sites));
+  closeEdit();showToast('✅ '+s.site+' atualizado');render();
+}
+
+// ── EXPORT & UTILS ─────────────────────────────────────────────────────────
+function exportCSV(){
+  const rows=[['Nº PC','Item','Site','Descrição','Responsável','Status','Envio Sharepoint','Obs']];
+  filtered.forEach(s=>rows.push([s.npc,s.item,s.site,s.desc,s.responsavel,s.status,s.sharepoint,s.obs]));
+  const csv=rows.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='diagnostico_export.csv';a.click();showToast('CSV exportado!');
+}
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+function render(){
+  renderStats();
+  if(currentTab==='lista')             applyFilters();
+  else if(currentTab==='kanban')       renderKanban();
+  else if(currentTab==='responsaveis') renderResponsaveis();
+  else if(currentTab==='pc')           renderPC();
+}
+document.getElementById('edit-overlay').addEventListener('click',function(e){if(e.target===this)closeEdit();});
+</script>
+</body>
+</html>
