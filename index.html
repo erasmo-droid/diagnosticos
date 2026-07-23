@@ -424,7 +424,8 @@ async function seedFirestore(){
   for(let i=0;i<INITIAL_DATA.length;i+=BATCH_SIZE){
     const batch=db.batch();
     INITIAL_DATA.slice(i,i+BATCH_SIZE).forEach(s=>{
-      const ref=db.collection(COLLECTION).doc(s.site);
+      const id=s.npc+'_'+String(s.item);
+      const ref=db.collection(COLLECTION).doc(id);
       batch.set(ref,{...s,status:'Pendente',responsavel:'',sharepoint:'',obs:''});
     });
     await batch.commit();
@@ -434,7 +435,7 @@ async function seedFirestore(){
 function startListener(){
   setSyncing(true);
   unsubscribe = db.collection(COLLECTION).onSnapshot(snap=>{
-    sites = snap.docs.map(d=>({...d.data(),_id:d.id}));
+    sites = snap.docs.filter(d=>/^\d+_\d+$/.test(d.id)).map(d=>({...d.data(),_id:d.id}));
     sites.sort((a,b)=>a.npc.localeCompare(b.npc)||(a.item-b.item));
     document.getElementById('loading-overlay').style.display='none';
     document.getElementById('app').style.display='block';
